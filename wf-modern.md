@@ -35,10 +35,11 @@ the Hostiles in the new Location card.
 
 *UVR page 36, paragraph 5*
 
-### Discord takes
+### Discord take
 Extra ammo alters the cost of the associated weapon, but does not have an RP cost during the mission.  
 Trashing the weapon makes the ammo "free" for purposes of RP computation.
 
+### Discord take
 If the pistol only carries 2 ammo, and you drop the mp5 and switch all 8 ammo to the pistol 
 I would think that now becomes 4 additional RP of ammo on the pistol
 
