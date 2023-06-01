@@ -84,6 +84,19 @@ which must be Destroyed with separate Attacks
 > Treat these Objective card Hostiles as being a Hostile card with reticles.
 Example: Treat the Supply Huts as being a Hostile card with 4 reticles, one for each Hut
 
-  *UVR page 51, paragraph 2-3*
+*UVR page 51, paragraph 2-3*
 
 So which is it? 4x 2-hit huts? or 1x 4-hit hut?
+
+## How Hostile are these Objective Targets?
+> Treat these Objective card Hostiles as being a Hostile card
+with reticles.
+
+*UVR page 51, paragraph 2*
+
+* Do these objective hostiles draw targeting chits? 
+* Do they move? 
+* What does it mean to suppress a Drug Hut?
+* Do they attack back?
+* Do they give XP when killed?
+* What is their XP value for the purposes of say, Sniper Call?
