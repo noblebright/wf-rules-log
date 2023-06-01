@@ -75,3 +75,15 @@ Rulebook says specifically they are not ammo.
 ### Discord take
 UVR page 7, paragraph 19 is referring to the "Gear and Grenade Counters" mentioned on page 8, not all grenades and rockets.
 
+## Objective Targets
+> Other Objectives note a specific number of targets, each of
+which must be Destroyed with separate Attacks
+
+*UVR page 50, paragraph 16*
+
+> Treat these Objective card Hostiles as being a Hostile card with reticles.
+Example: Treat the Supply Huts as being a Hostile card with 4 reticles, one for each Hut
+
+  *UVR page 51, paragraph 2-3*
+
+So which is it? 4x 2-hit huts? or 1x 4-hit hut?
