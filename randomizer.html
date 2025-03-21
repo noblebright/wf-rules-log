@@ -1,0 +1,57 @@
+<html>
+<head>
+<style>
+.flex {
+	display: flex;
+	gap: 1em;
+}
+.flex-col {
+	display: flex;
+	flex-direction: column;
+}
+.justify-space-between {
+	justify-content: space-between;
+	flex-grow:1;
+}
+
+article button {
+	margin-top: 1em;
+}
+</style>
+</head>
+<body>
+<h1>Warfighter Randomizer</h1>
+<main class="flex">
+</main>
+<script>
+
+function generate(data) {
+	const baseGames = {};
+	const main = document.querySelector("main");
+	Object.values(data.expansions).forEach(xp => {
+		baseGames[xp.ruleset] ??= [];
+		baseGames[xp.ruleset].push(xp.id);
+	});
+	Object.entries(baseGames).forEach(([key, expansionList]) => {
+		const root = document.createElement("article");
+		root.classList.add("flex-col");
+		root.id = key;
+		root.innerHTML = `<h2>${data.metadata.baseGameNames[key]}</h2><section class="flex-col justify-space-between">` +
+		expansionList.map(id => `<label><input id="${id}" type="checkbox" ${data.expansions[id].baseGame ? "checked" : ""}/>${data.expansions[id].name}</label>`).join("\n") +
+		`</section><button>Generate ${data.metadata.baseGameNames[key]} Mission</button>`;
+		const button = root.querySelector("button");
+		button.addEventListener("click", () => randomize(data, key));
+		main.appendChild(root);
+	});
+}
+
+function randomize(db, baseGame) {
+
+}
+
+fetch("https://raw.githubusercontent.com/noblebright/wf-rules-log/refs/heads/main/expansion-db.json").then(res => res.json()).then(data => {
+	generate(data);
+})
+
+</script>
+</html>

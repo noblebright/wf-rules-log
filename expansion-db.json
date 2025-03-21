@@ -1203,8 +1203,14 @@
             [
                 "General Soleimani"
             ],
-            "insertions": ["Helo (UH-60 BLACKHAWK) (General Soleimani)"],
-            "extractions": ["Helo (MH-6) (General Soleimani)"],
+            "insertions":
+            [
+                "Helo (UH-60 BLACKHAWK) (General Soleimani)"
+            ],
+            "extractions":
+            [
+                "Helo (MH-6) (General Soleimani)"
+            ],
             "missions":
             [
                 {
@@ -2813,13 +2819,16 @@
     },
     "metadata":
     {
-        "baseGameNames": {
+        "baseGameNames":
+        {
             "modern": "Warfighter Modern",
             "shadowWar": "Shadow War",
             "ww2Europe": "WW II: Europe",
             "ww2Asia": "WW II: Asia"
         },
-        "axisFactions": [],
-        "alliedFactions": []
+        "axisFactions":
+        [],
+        "alliedFactions":
+        []
     }
 }
