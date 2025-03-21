@@ -1,6 +1,10 @@
 <html>
 <head>
 <style>
+.inline-flex {
+	display: inline-flex;
+	gap: 1em;
+}
 .flex {
 	display: flex;
 	gap: 1em;
@@ -13,7 +17,14 @@
 	justify-content: space-between;
 	flex-grow:1;
 }
-
+.flex-center {
+	display:flex;
+	justify-content: center;
+	margin-top: 1em;
+}
+main {
+	display:inline-block;
+}
 article button {
 	margin-top: 1em;
 }
@@ -21,13 +32,33 @@ article button {
 </head>
 <body>
 <h1>Warfighter Randomizer</h1>
-<main class="flex">
+<main>
+	<div id="lists" class="inline-flex"></div>
+	<div class="flex-center"><button id="fullRandom">Random Base Game Mission</button></div>
 </main>
+
+<footer class="flex">
+	<div class="flex-col">
+		<h3>RP Limits</h3>
+		<label><input name="rp" type="radio" id="skirmish" checked/>Skirmish (1 - 49RP)</label>
+		<label><input name="rp" type="radio" id="battle"/>Battle (50 - 89RP)</label>
+		<label><input name="rp" type="radio" id="war"/>War (90 - 200RP)</label>
+		<label><input name="rp" type="radio" id="everything"/>Everything</label>
+		<label><input name="rp" type="radio" id="custom"/>Custom <input id="minRP" type="numeric" min="1" value="1" size="1"><span>-</span><input type="numeric" id="maxRP" value="200" size="1"></label>
+	</div>
+	<div class="flex-col">
+		<h3>Misc Options</h3>
+		<label><input name="rp" type="checkbox" id="infighting" checked/>No infighting</label>
+		<label><input name="rp" type="checkbox" id="axis"/>Axis v Allies</label>
+	</div>
+	<div id="results">
+	</div>
+</footer>
 <script>
 
 function generate(data) {
 	const baseGames = {};
-	const main = document.querySelector("main");
+	const main = document.querySelector("#lists");
 	Object.values(data.expansions).forEach(xp => {
 		baseGames[xp.ruleset] ??= [];
 		baseGames[xp.ruleset].push(xp.id);
@@ -43,13 +74,27 @@ function generate(data) {
 		button.addEventListener("click", () => randomize(data, key));
 		main.appendChild(root);
 	});
+	document.getElementById("fullRandom").addEventListener("click", () => fullRandom(data));
 }
 
 function randomize(db, baseGame) {
+	const availableSets = [...document.getElementById(baseGame).querySelectorAll("input[type=checkbox]:checked")].map(box => box.id);
+	const missions = availableSets.flatMap((id) => {
+		const expansion = db.expansions[id].missions ?? [];
+		return expansion.map(x => ({...x, expansion: id }));
+	});
+	const selectedMission = missions[Math.floor(Math.random() * missions.length)];
+	console.log(selectedMission);
+}
 
+function fullRandom(db) {
+	const baseGames = [...new Set([...document.querySelectorAll("main input[type=checkbox]:checked")].map(x => db.expansions[x.id].ruleset))];
+	const selectedGame = baseGames[Math.floor(Math.random() * baseGames.length)];
+	randomize(db, selectedGame);
 }
 
 fetch("https://raw.githubusercontent.com/noblebright/wf-rules-log/refs/heads/main/expansion-db.json").then(res => res.json()).then(data => {
+	window.data = data;
 	generate(data);
 })
 
