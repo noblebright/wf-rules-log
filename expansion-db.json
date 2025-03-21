@@ -399,6 +399,11 @@
             "id": "expansion19",
             "name": "Elite Drug War Adversaries",
             "ruleset": "modern",
+            "locations":
+            [
+                "Jungle (Elite Hostiles)",
+                "Jungle"
+            ],
             "factions":
             [
                 "Mexico"
@@ -443,7 +448,7 @@
             "id": "expansion24",
             "name": "Chinese Adversaries",
             "ruleset": "modern",
-            "factions":
+            "locations":
             [
                 "China"
             ],
@@ -2827,8 +2832,31 @@
             "ww2Asia": "WW II: Asia"
         },
         "axisFactions":
-        [],
+        [
+            "Germany",
+            "German Undead",
+            "Japan Undead",
+            "Japan",
+            "German Airborne",
+            "Japan SNLF"
+        ],
         "alliedFactions":
-        []
+        [
+            "United States",
+            "United Kingdom",
+            "Russia",
+            "Poland",
+            "France",
+            "Finland",
+            "Canada",
+            "USMC",
+            "Australia",
+            "China",
+            "US Airborne",
+            "UK Airborne",
+            "Undead",
+            "Maquis (French)",
+            "Norway"
+        ]
     }
 }

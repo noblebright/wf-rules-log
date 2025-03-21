@@ -22,6 +22,12 @@
 	justify-content: center;
 	margin-top: 1em;
 }
+.hidden {
+	display: none;
+}
+#results {
+	margin-left: 3em;
+}
 main {
 	display:inline-block;
 }
@@ -48,10 +54,14 @@ article button {
 	</div>
 	<div class="flex-col">
 		<h3>Misc Options</h3>
-		<label><input name="rp" type="checkbox" id="infighting" checked/>No infighting</label>
-		<label><input name="rp" type="checkbox" id="axis"/>Axis v Allies</label>
+		<label><input type="checkbox" id="infighting" checked/>No infighting</label>
+		<label><input type="checkbox" id="axis" checked/>Axis v Allies</label>
 	</div>
-	<div id="results">
+	<div id="results" class="hidden">
+		<h4>Faction:<h4>
+		<h4>Location:<h4>
+		<h4>Mission:<h4>
+		<h4>Objective:<h4>
 	</div>
 </footer>
 <script>
@@ -77,19 +87,156 @@ function generate(data) {
 	document.getElementById("fullRandom").addEventListener("click", () => fullRandom(data));
 }
 
-function randomize(db, baseGame) {
-	const availableSets = [...document.getElementById(baseGame).querySelectorAll("input[type=checkbox]:checked")].map(box => box.id);
+function rpFilter(mission) {
+	const rpRadioButton = document.querySelector("input[name=rp]:checked");
+	switch(rpRadioButton.id) {
+		case "skirmish": return mission.rp >= 1 && mission.rp <= 49;
+		case "battle": return mission.rp >= 50 && mission.rp <= 89;
+		case "skirmish": return mission.rp >= 90;
+		case "everything": return true;	
+		case "custom": return mission.rp >= +document.getElementById("minRP").value && mission.rp <= +document.getElementById("maxRP").value;
+	}
+	return false;
+}
+
+function pick(list) {
+	return list[Math.floor(Math.random() * list.length)];
+}
+
+function selectRegion(db, baseGames, mission) {
+	let region;
+	if(db.expansions[mission.expansion].locations) {
+		// this set has a unique region, so we should use it, and use objectives from the same set only.
+		region = db.expansions[mission.expansion].locations;
+	} else if(mission.locale) {
+		// this came from modern and is either middle east or jungle base game
+		region = db.expansions[mission.locale].locations;
+	} else {
+		// use the base set region
+		region = pick(baseGames.map(x => db.expansions[x])).locations;
+	}
+	return pick(region);
+}
+
+function selectObjective(db, mission, availableSets) {
+	let objectives;
+	if(db.expansions[mission.expansion].locations) {
+		// this set has a unique region, so we should use it, and use objectives from the same region only.
+		const missionRegions = db.expansions[mission.expansion].locations;
+		objectives = availableSets.flatMap(id => {
+			const setRegions = db.expansions[id].locations ?? [];
+			if(setRegions.some(setRegion => missionRegions.includes(setRegion))) {
+				return db.expansions[mission.expansion].objectives;	
+			}
+			return []
+		});
+	} else if(mission.locale) {
+		// this came from modern and is either middle east or jungle base game
+		objectives = [
+			...db.expansions[mission.locale].objectives, //base game objectives
+			...availableSets.flatMap(expansionId => (db.expansions[expansionId].objectives ?? []).filter(x => x.locale === mission.locale)) // expansion objectives in the same region
+		];
+	} else {
+		// use all non-region objectives
+		objectives = availableSets.flatMap(id => {
+			const set = db.expansions[id];
+			if(!set.baseGame && set.locations) { // unique locations, we don't want these.
+				return [];
+			}
+			return set.objectives;
+		});
+	}
+	console.log("objectives", objectives);
+	return pick(objectives);
+}
+
+function createSelector(prop) {
+	return function (db, availableSets) {
+		const options = availableSets.flatMap(id => db.expansions[id][prop] ?? []);
+		console.log(prop, options);
+		return pick(options);
+	}
+}
+
+function selectFaction(db, availableSets) {
+	const factions = new Set();
+	availableSets.forEach(id => {
+		db.expansions[id].factions?.forEach(faction => {
+			factions.add(faction);
+		})
+	})
+	return pick([...factions]);
+}
+
+function selectHostiles(db, availableSets, faction) {
+	const hostiles = new Set(availableSets.flatMap(id => db.expansions[id].hostiles ?? []));
+	console.log("hostiles", hostiles);
+	if(!document.querySelector("#infighting:checked")) {
+		hostiles.delete(faction)
+	}
+	if(document.querySelector("#axis:checked")) {
+		const axis = new Set(db.metadata.axisFactions);
+		const allies = new Set(db.metadata.alliedFactions);
+		if(axis.has(faction)) {
+			axis.forEach(x => hostiles.delete(x));
+		} else {
+			allies.forEach(x => hostiles.delete(x));
+		}
+	}
+	console.log("filtered hostiles", hostiles);
+	return pick([...hostiles]);
+}
+
+const selectInsertion = createSelector("insertions");
+const selectExtraction = createSelector("extractions");
+
+function randomize(db, ruleset) {
+	// list of ids of available sets
+	const availableSets = [...document.getElementById(ruleset).querySelectorAll("input[type=checkbox]:checked")].map(box => box.id);
+	console.log("available sets:", availableSets);
+	// list of missions from those sets, that match the RP filter
 	const missions = availableSets.flatMap((id) => {
 		const expansion = db.expansions[id].missions ?? [];
 		return expansion.map(x => ({...x, expansion: id }));
-	});
-	const selectedMission = missions[Math.floor(Math.random() * missions.length)];
-	console.log(selectedMission);
+	}).filter(rpFilter);
+
+	console.log("missions", missions);
+	// pick a random mission from the list
+	const selectedMission = pick(missions);
+	const baseGames = availableSets.filter(expansionId => db.expansions[expansionId].baseGame && db.expansions[expansionId].ruleset === db.expansions[selectedMission.expansion].ruleset);
+
+	const region = selectRegion(db, baseGames, selectedMission);
+	const objective = selectObjective(db, selectedMission, availableSets);
+
+	const faction = selectFaction(db, availableSets);
+	console.log(selectedMission, region, objective, faction);
+
+	const hostiles = selectHostiles(db, availableSets, faction);
+	const insertion = selectInsertion(db, availableSets);
+	const extraction = selectExtraction(db, availableSets);
+	displayResult({mission: selectedMission, region, objective, faction, hostiles, insertion, extraction });
+}
+
+function displayResult({mission, region, objective, faction, hostiles, insertion, extraction}) {
+	const resultElement = document.getElementById("results");
+	const html = [`<h3>Results:</h3><h4>Faction: ${faction}</h4>`];
+	if(hostiles) {
+		html.push(`<h4>Hostiles: ${hostiles}</h4>`)
+	}
+	if(insertion) {
+		html.push(`<h4>Insertion: ${insertion}</h4>`)
+	}
+	html.push(`<h4>Location: ${region}</h4>`, `<h4>Mission: ${mission.name}</h4>`, `<h4>Objective: ${typeof objective === "string" ? objective : objective.name}</h4>`)
+	if(extraction) {
+		html.push(`<h4>Extraction: ${extraction}</h4>`)
+	}
+	resultElement.innerHTML = html.join("\n");
+	resultElement.classList.remove("hidden");
 }
 
 function fullRandom(db) {
 	const baseGames = [...new Set([...document.querySelectorAll("main input[type=checkbox]:checked")].map(x => db.expansions[x.id].ruleset))];
-	const selectedGame = baseGames[Math.floor(Math.random() * baseGames.length)];
+	const selectedGame = pick(baseGames);
 	randomize(db, selectedGame);
 }
 
