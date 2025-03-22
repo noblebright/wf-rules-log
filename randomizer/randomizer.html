@@ -1,0 +1,296 @@
+<html>
+<head>
+<style>
+.inline-flex {
+	display: inline-flex;
+	gap: 1em;
+}
+.flex {
+	display: flex;
+	gap: 1em;
+}
+.flex-col {
+	display: flex;
+	flex-direction: column;
+}
+.justify-space-between {
+	justify-content: space-between;
+	flex-grow:1;
+}
+.flex-center {
+	display:flex;
+	justify-content: center;
+	margin-top: 1em;
+}
+.hidden {
+	display: none;
+}
+#results {
+	margin-left: 3em;
+}
+main {
+	display:inline-block;
+}
+article button {
+	margin-top: 1em;
+}
+body {
+	font-family: sans-serif;
+	font-size: 14px;
+}
+
+</style>
+</head>
+<body>
+<h1>Warfighter Randomizer</h1>
+<main>
+	<div id="lists" class="inline-flex"></div>
+	<div class="flex-center"><button id="fullRandom">Random Base Game Mission</button></div>
+</main>
+
+<footer class="flex">
+	<div class="flex-col">
+		<h3>RP Limits</h3>
+		<label><input name="rp" type="radio" id="skirmish" checked/>Skirmish (1 - 49RP)</label>
+		<label><input name="rp" type="radio" id="battle"/>Battle (50 - 89RP)</label>
+		<label><input name="rp" type="radio" id="war"/>War (90 - 200RP)</label>
+		<label><input name="rp" type="radio" id="everything"/>Everything</label>
+		<label><input name="rp" type="radio" id="custom"/>Custom <input id="minRP" type="numeric" min="1" value="1" size="1"><span>-</span><input type="numeric" id="maxRP" value="200" size="1"></label>
+	</div>
+	<div class="flex-col">
+		<h3>Misc Options</h3>
+		<label><input type="checkbox" id="infighting" checked/>No infighting</label>
+		<label><input type="checkbox" id="axis" checked/>Axis v Allies</label>
+	</div>
+	<div id="results" class="hidden">
+		<h4>Faction:<h4>
+		<h4>Location:<h4>
+		<h4>Mission:<h4>
+		<h4>Objective:<h4>
+	</div>
+</footer>
+<script>
+
+function generate(data) {
+	const baseGames = {};
+	const main = document.querySelector("#lists");
+	Object.values(data.expansions).forEach(xp => {
+		baseGames[xp.ruleset] ??= [];
+		baseGames[xp.ruleset].push(xp.id);
+	});
+	Object.entries(baseGames).forEach(([key, expansionList]) => {
+		const root = document.createElement("article");
+		root.classList.add("flex-col");
+		root.id = key;
+		root.innerHTML = `<h2>${data.metadata.baseGameNames[key]}</h2><section class="flex-col justify-space-between">` +
+		expansionList.map(id => `<label><input id="${id}" type="checkbox" ${data.expansions[id].baseGame ? "checked" : ""}/>${data.expansions[id].name}</label>`).join("\n") +
+		`</section><button>Generate ${data.metadata.baseGameNames[key]} Mission</button>`;
+		const button = root.querySelector("button");
+		button.addEventListener("click", () => randomize(data, key));
+		main.appendChild(root);
+	});
+	document.getElementById("fullRandom").addEventListener("click", () => fullRandom(data));
+}
+
+function rpFilter(mission) {
+	const rpRadioButton = document.querySelector("input[name=rp]:checked");
+	switch(rpRadioButton.id) {
+		case "skirmish": return mission.rp >= 1 && mission.rp <= 49;
+		case "battle": return mission.rp >= 50 && mission.rp <= 89;
+		case "skirmish": return mission.rp >= 90;
+		case "everything": return true;	
+		case "custom": return mission.rp >= +document.getElementById("minRP").value && mission.rp <= +document.getElementById("maxRP").value;
+	}
+	return false;
+}
+
+function pick(list, num = 1) {
+	const dupList = [...list];
+	results = [];
+	if(dupList.length < num) {
+		throw new Error(`Attempted to pick ${num} items out of a list of ${list.length}`);
+	}
+	for(let i = 0; i < num; i++) {
+		const idx = Math.floor(Math.random() * list.length);
+		results.push(dupList[idx]);
+		dupList.splice(idx, 1);
+	}
+	if(num === 1) {
+		return results[0]
+	} else {
+		return results;
+	}
+}
+
+function selectObjective(db, mission, availableSets) {
+	const objectives = 
+			availableSets.flatMap(expansionId => (db.expansions[expansionId].objectives ?? []).filter(x => x.region === mission.region)); // expansion objectives in the same region
+	console.log("objectives", objectives);
+	const filteredObjectives = mission.type ? objectives.filter(x => x.type === mission.type) : objectives;
+	console.log("filteredObjectives", objectives);
+	return pick(filteredObjectives, mission.objectiveCount);
+}
+
+function createSelector(prop) {
+	return function (db, availableSets) {
+		const options = availableSets.flatMap(id => db.expansions[id][prop] ?? []);
+		console.log(prop, options);
+		if(!options.length) return;
+		return pick(options);
+	}
+}
+
+function getHostileFactionIdentity(db, str) {
+	return Object.keys(db.metadata.factionMap).find(k => db.metadata.factionMap[k].find(frag => str.includes(frag))) ?? str;
+}
+
+function isAxis(db, str) {
+	return db.metadata.axis.includes(getHostileFactionIdentity(db, str));
+}
+
+function isAllied(db, str) {
+	return db.metadata.allies.includes(getHostileFactionIdentity(db, str));
+}
+
+function selectFaction(db, availableSets, mission, hostiles) {
+	const factions = new Set();
+	availableSets.forEach(id => {
+		db.expansions[id].factions?.forEach(faction => {
+			factions.add(faction.name);
+		})
+	})
+	console.log("factions", [...factions]);
+
+	if(document.querySelector("#infighting:checked")) {
+		const hostileIdentity = getHostileFactionIdentity(db, hostiles);
+		console.log("hostileIdentity", hostileIdentity);
+		factions.forEach(item => {
+			if(getHostileFactionIdentity(db, item) === hostileIdentity) {
+				factions.delete(item);
+			}
+		})
+	}
+
+	const ruleset = db.expansions[mission.expansion].ruleset;
+	const isWW2 = ["pacific", "europe", "mediterranean"].includes(ruleset);
+
+	if(document.querySelector("#axis:checked") && isWW2) {
+		console.log("Culling Axis vs Allies...");
+		if(isAxis(db, hostiles)) {
+			factions.forEach(item => {
+				if(isAxis(db, item)) {
+					factions.delete(item);
+				}	
+			})
+		} else if(isAllied(db, hostiles)) {
+			factions.forEach(item => {
+				if(isAllied(db, item)) {
+					factions.delete(item);
+				}	
+			})
+		}
+	}
+	
+	const filteredFactions = mission.airborne ? [...factions].filter(x => x.airborne) : [...factions];
+	console.log("filtered factions", filteredFactions);
+	if(!filteredFactions.length) return;
+	return pick(filteredFactions);
+}
+
+function selectHostiles(db, availableSets, region) {
+	const regionHostiles = new Set(availableSets.flatMap(id => (db.expansions[id].regions?.find(r => r.name === region)?.hostiles ?? [])));
+	const globalHostiles = new Set(availableSets.flatMap(id => db.expansions[id].hostiles ?? []));
+	console.log("regionHostiles", regionHostiles);
+	console.log("globalHostiles", globalHostiles);
+	
+	const hostiles = regionHostiles.size ? regionHostiles : globalHostiles;
+	console.log("filtered hostiles", hostiles);
+	return pick([...hostiles]);
+}
+
+const selectInsertion = createSelector("insertions");
+const selectExtraction = createSelector("extractions");
+
+function randomize(db, ruleset) {
+	// list of ids of available sets
+	const availableSets = [...document.getElementById(ruleset).querySelectorAll("input[type=checkbox]:checked")].map(box => box.id);
+	console.log("available sets:", availableSets);
+	// list of missions from those sets, that match the RP filter
+	const missions = availableSets.flatMap((id) => {
+		const expansion = db.expansions[id].missions ?? [];
+		return expansion.map(x => ({...x, expansion: id }));
+	}).filter(rpFilter);
+
+	console.log("missions", missions);
+	// pick a random mission from the list
+	const mission = pick(missions);
+	const region = mission.region;
+	const objective = selectObjective(db, mission, availableSets);
+	
+	const hostiles = selectHostiles(db, availableSets, region);
+	// pick hostiles first, since it reduces the list of valid factions
+	const faction = selectFaction(db, availableSets, mission, hostiles);
+	console.log(mission, region, objective, faction);
+
+	
+	const insertion = selectInsertion(db, availableSets);
+	const extraction = selectExtraction(db, availableSets);
+	displayResult({ mission, region, objective, faction, hostiles, insertion, extraction });
+}
+
+function displayResult({mission, region, objective, faction, hostiles, insertion, extraction}) {
+	const resultElement = document.getElementById("results");
+	if(!mission) {
+		resultElement.innerHTML = "<h3>No Missions Found!</h3";
+		resultElement.classList.remove("hidden");
+		return;
+	}
+	if(!objective) {
+		resultElement.innerHTML = "<h3>No Objectives Found!</h3";
+		resultElement.classList.remove("hidden");
+		return;
+	}
+	if(!faction) {
+		resultElement.innerHTML = "<h3>No Factions Found!</h3";
+		resultElement.classList.remove("hidden");
+		return;
+	}
+	if(!hostiles) {
+		resultElement.innerHTML = "<h3>No Hostiles Found!</h3";
+		resultElement.classList.remove("hidden");
+		return;
+	}
+	const html = [`<h3>Results:</h3><h4>Faction: ${faction}</h4>`];
+	if(hostiles) {
+		html.push(`<h4>Hostiles: ${hostiles}</h4>`)
+	}
+	if(insertion) {
+		html.push(`<h4>Insertion: ${insertion}</h4>`)
+	}
+	let objectiveHTML;
+	if(Array.isArray(objective)) {
+		objectiveHTML = objective.map((o, idx) => `<h4>Objective #${idx + 1}: ${o.name}</h4>`)
+	} else {
+		objectiveHTML = [`<h4>Objective: ${objective.name}</h4>`]
+	}
+	html.push(`<h4>Location: ${region}</h4>`, `<h4>Mission: ${mission.name}</h4>`, ...objectiveHTML);
+	if(extraction) {
+		html.push(`<h4>Extraction: ${extraction}</h4>`)
+	}
+	resultElement.innerHTML = html.join("\n");
+	resultElement.classList.remove("hidden");
+}
+
+function fullRandom(db) {
+	const baseGames = [...new Set([...document.querySelectorAll("main input[type=checkbox]:checked")].map(x => db.expansions[x.id].ruleset))];
+	const selectedGame = pick(baseGames);
+	randomize(db, selectedGame);
+}
+
+fetch("https://raw.githubusercontent.com/noblebright/wf-rules-log/refs/heads/main/randomizer/expansion-db.json").then(res => res.json()).then(data => {
+	window.data = data;
+	generate(data);
+})
+
+</script>
+</html>
