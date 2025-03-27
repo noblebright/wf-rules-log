@@ -106,7 +106,7 @@ function rpFilter(mission) {
 	switch(rpRadioButton.id) {
 		case "skirmish": return mission.rp >= 1 && mission.rp <= 49;
 		case "battle": return mission.rp >= 50 && mission.rp <= 89;
-		case "skirmish": return mission.rp >= 90;
+		case "war": return mission.rp >= 90;
 		case "everything": return true;	
 		case "custom": return mission.rp >= +document.getElementById("minRP").value && mission.rp <= +document.getElementById("maxRP").value;
 	}
