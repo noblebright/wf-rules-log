@@ -361,7 +361,10 @@ function fullRandom(db) {
 	randomize(db, selectedGame);
 }
 
-fetch("https://raw.githubusercontent.com/noblebright/wf-rules-log/refs/heads/main/randomizer/expansion-db.json").then(res => res.json()).then(data => {
+const dbUrl = window.location.hostname === "localhost" ? 
+			  "http://localhost:3000/expansion-db.json" : 
+			  "https://raw.githubusercontent.com/noblebright/wf-rules-log/refs/heads/main/randomizer/expansion-db.json";
+fetch(dbUrl).then(res => res.json()).then(data => {
 	window.data = data;
 	generate(data);
 })
